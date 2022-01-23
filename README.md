@@ -31,3 +31,4 @@ MySQL2
 
 ## Video
 
+https://drive.google.com/file/d/1QCJ9RH9kNSN7M1-OWkuH7DN2CxUPpWph/view?usp=sharing
