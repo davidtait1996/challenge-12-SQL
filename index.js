@@ -64,14 +64,15 @@ function initWork() {
         const sql = 
         `
         SELECT 
-        concat(employee.first_name, " ", employee.last_name) AS Name,
-        employee.manager_id AS Manager,
-        role.title as 'Job Title',
-        role.salary as 'Salary',
-        department.name as 'Department'
-        FROM employee
-        LEFT JOIN role ON employee.role_id = role.id
-        LEFT JOIN department ON employee.role_id = department.id
+        concat(emp.first_name, " ", emp.last_name) AS Name,
+        concat(mang.first_name, " ", mang.last_name) AS 'Manager Name',
+        role.title AS 'Job Title',
+        role.salary AS 'Salary',
+        department.name AS 'Department'
+        FROM employee emp
+        LEFT JOIN role ON emp.role_id = role.id
+        LEFT JOIN department ON emp.role_id = department.id
+        LEFT JOIN employee mang ON emp.manager_id = mang.id
         `
 
         db.query(sql, (err, employees) => {
@@ -89,6 +90,8 @@ function initWork() {
         addRole();
       } else if (selection === initChoices[5]){ //add new employee
         addEmployee();
+      } else if (selection === initChoices[6]){ //update employee
+        updateEmployee();
       }
     })
     .catch((error) => {
@@ -105,7 +108,15 @@ const addDepartment = async () => {
     {
       type: "input",
       name: "name",
-      message: "What is the new department?"
+      message: "What is the new department?",
+      validate: input => {
+        if(input) {
+          return true;
+        } else {
+          console.log("Please enter a department name.");
+          return false;
+        }
+      }
     }
   ]);
   await db.promise().query('INSERT INTO department SET ?', deptData);
@@ -123,12 +134,28 @@ const addRole = async () => {
     {
       type: 'input',
       name: 'title',
-      message: 'What is the new title of the role?'
+      message: 'What is the new title of the role?',
+      validate: input => {
+        if(input) {
+          return true;
+        } else {
+          console.log("Please enter a title.");
+          return false;
+        }
+      }
     },
     {
       type: 'input',
       name: 'salary',
-      message: 'What is the salary?'
+      message: 'What is the salary?',
+      validate: input => {
+        if(input) {
+          return true;
+        } else {
+          console.log("Please enter a salary.");
+          return false;
+        }
+      }
     },
     {
       type: 'list',
@@ -137,7 +164,6 @@ const addRole = async () => {
       choices: departmentMap
     }
   ]);
-  console.log("userData", userData);
   await db.promise().query('INSERT INTO role SET ?', userData);
   initWork();
 }
@@ -203,7 +229,48 @@ const addEmployee = async () => {
       choices: managersMap
     }
   ]);
-  console.log("employeeData", employeeData);
   await db.promise().query('INSERT INTO employee SET ?', employeeData);
+  initWork();
+}
+
+const updateEmployee = async () => {
+
+  const employees = await db.promise().query(
+    `
+    SELECT 
+    * 
+    FROM employee
+    `);
+  const employeesMap = await employees[0].map(({id, first_name, last_name, role_id, manager_id}) => ({
+    name: `${first_name} ${last_name}`,
+    value: id
+  }))
+
+  const roles = await db.promise().query(
+    `
+    SELECT 
+    * 
+    FROM role
+    `);
+  const rolesMap = await roles[0].map(({id, title, salary, department_id}) => ({
+    name: title,
+    value: id
+  }))
+
+  const employeeData = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'id',
+      message: 'Which employee do you want to edit?',
+      choices: employeesMap
+    },
+    {
+      type: 'list',
+      name: 'role_id',
+      message: 'What role will they be?',
+      choices: rolesMap
+    }
+  ])
+  await db.promise().query(`UPDATE employee SET role_id = ${employeeData.role_id} WHERE id = ${employeeData.id}`);
   initWork();
 }
